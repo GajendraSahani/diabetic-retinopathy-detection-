@@ -1,1 +1,30 @@
+version: '3.8'
 
+services:
+  api-service:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/models/efficientnet_aptos.keras
+    volumes:
+      - ./api-service/models:/app/models
+    networks:
+      - retinopathy-net
+
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile.ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api-service
+    networks:
+      - retinopathy-net
+
+networks:
+  retinopathy-net:
+    driver: bridge
