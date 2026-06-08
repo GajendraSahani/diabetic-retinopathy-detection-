@@ -3,41 +3,47 @@ import requests
 from PIL import Image
 import io
 
-st.set_page_config(page_title="RetinaScan AI", layout="centered")
+st.set_page_config(page_title="RetinaScan AI Engine Room", layout="wide")
 
-st.title("Diabetic Retinopathy Screening System")
-st.write("Upload high-resolution fundus retinal image files to evaluate status.")
+st.title("Deep Learning Diagnostic Interface for Retinopathy")
+st.write("Production pipeline directly coupled via REST API instances to your trained Keras graph models.")
 
-API_ENDPOINT = "http://api-service:8000/api/v1/predict"
+BACKEND_ENDPOINT = "http://api-service:8000/api/v1/predict"
 
-uploaded_file = st.file_uploader("Choose a retinal image source files...", type=["png", "jpg", "jpeg"])
+left_col, right_col = st.columns([1, 1])
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Retinal Scan File Location Preview", use_container_width=True)
-    
-    if st.button("Analyze Scan Structure"):
-        with st.spinner("Executing Network Core Evaluator Protocols..."):
-            # Prepare memory footprint payload stream
-            img_byte_arr = io.BytesIO()
-            image.save(img_byte_arr, format=image.format if image.format else 'JPEG')
-            img_byte_arr = img_byte_arr.getvalue()
+with left_col:
+    st.subheader("Data Input Stream")
+    uploaded_scan = st.file_uploader("Upload Retinal Fundus File Image...", type=["png", "jpg", "jpeg"])
+    if uploaded_scan:
+        opened_image = Image.open(uploaded_scan)
+        st.image(opened_image, caption="Uploaded Eye Scan Payload Target Preview", use_container_width=True)
+
+with right_col:
+    st.subheader("Model Diagnostics Engine")
+    if uploaded_scan and st.button("Trigger Deep Learning Inference"):
+        with st.spinner("Processing through your model's neural network components..."):
+            byte_buffer = io.BytesIO()
+            opened_image.save(byte_buffer, format='JPEG')
+            binary_payload = byte_buffer.getvalue()
             
-            files = {"file": (uploaded_file.name, img_byte_arr, f"image/{uploaded_file.type}")}
+            files_multipart = {"file": (uploaded_scan.name, binary_payload, "image/jpeg")}
             
             try:
-                response = requests.post(API_ENDPOINT, files=files, timeout=30)
-                if response.status_code == 200:
-                    data = response.json()
+                api_response = requests.post(BACKEND_ENDPOINT, files=files_multipart, timeout=45)
+                if api_response.status_code == 200:
+                    json_data = api_response.json()
                     
-                    st.success("Analysis Complete!")
-                    st.subheader(f"Diagnosis: **{data['diagnosis']}**")
-                    st.progress(data['confidence'])
-                    st.write(f"Model Inference Confidence score rating value matches: **{data['confidence']*100:.2f}%**")
+                    st.success("Inference Evaluator Protocol Succeeded.")
+                    st.metric(label="Predicted Condition Status Class", value=json_data['diagnosis'])
+                    st.metric(label="Network Probability Output Confidence Match", value=f"{json_data['confidence']*100:.2f}%")
                     
-                    if data['class_id'] > 0:
-                        st.warning("Attention: Medical signs of clinical retinopathy detected. Prompt validation suggested.")
+                    # Highlight clinical status warnings depending on output class indexing thresholds
+                    if json_data['class_id'] >= 2:
+                        st.error("Clinical Severity Flag: Referral for clinical verification strongly recommended.")
+                    elif json_data['class_id'] == 1:
+                        st.warning("Warning Flag: Early signs of mild condition detected. Regular screening advised.")
                 else:
-                    st.error(f"Error calling backend routing api pipeline: Status Code {response.status_code}")
+                    st.error(f"API Error. Status Code: {api_response.status_code}")
             except Exception as e:
-                st.error(f"Failed to communicate with API service infrastructure connection node: {e}")
+                st.error(f"Could not connect to the API container: {e}")
